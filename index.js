@@ -2,7 +2,16 @@ const express = require("express");
 const client = require("prom-client"); // metric collection
 const { doSomeHeavyTask } = require("./util");
 const responseTime = require("response-time");
-
+const { createLogger, transports } = require("winston");
+const LokiTransport = require("winston-loki");
+const options = {
+    transports: [
+        new LokiTransport({
+            host: "http://127.0.0.1:3100"
+        })
+    ]
+};
+const logger = createLogger(options);
 const app = express();
 const PORT = process.env.PORT || 8000;
 
@@ -17,9 +26,9 @@ const reqResTime = new client.Histogram({
     buckets: [0.1, 0.3, 0.5, 0.7, 1, 1.5, 2, 0.02] // in seconds
 });
 
-const totalReqCounter=new client.Counter({
-    name:"total_req",
-    help:"Total number of requests received",
+const totalReqCounter = new client.Counter({
+    name: "total_req",
+    help: "Total number of requests received",
 })
 
 app.use(responseTime((req, res, time) => {
@@ -33,6 +42,7 @@ app.use(responseTime((req, res, time) => {
 
 
 app.get("/", (req, res) => {
+    logger.info("Root endpoint was hit on / route");
     res.send("Server is running");
 });
 
@@ -41,7 +51,8 @@ app.get("/slow", async (req, res) => {
         const result = await doSomeHeavyTask();
         res.send(result);
     } catch (err) {
-        console.error(err);
+        logger.error("Error occurred in /slow route", { error: err });
+        // console.error(err);
         res.status(500).send("Internal Server Error");
     }
 });
