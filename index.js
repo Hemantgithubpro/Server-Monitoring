@@ -7,6 +7,9 @@ const LokiTransport = require("winston-loki");
 const options = {
     transports: [
         new LokiTransport({
+            labels: {
+                appName: "express_app"
+            },
             host: "http://127.0.0.1:3100"
         })
     ]
